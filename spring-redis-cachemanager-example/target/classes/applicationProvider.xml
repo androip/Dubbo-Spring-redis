@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:dubbo="http://code.alibabatech.com/schema/dubbo" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:c="http://www.springframework.org/schema/c"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+    	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+        http://www.springframework.org/schema/tx 
+        http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-3.0.xsd
+        http://code.alibabatech.com/schema/dubbo  
+        http://code.alibabatech.com/schema/dubbo/dubbo.xsd  
+        http://www.springframework.org/schema/cache 
+        http://www.springframework.org/schema/cache/spring-cache.xsd
+        ">
+
+	<!-- Application name -->
+	<dubbo:application name="hello-world-app" />
+	<!-- registry address, used for service to register itself -->
+	<dubbo:registry address="zookeeper://192.168.11.158:2181" />
+	<!-- expose this service through dubbo protocol, through port 20880 -->
+	<!-- <dubbo:protocol name="dubbo" port="20880" /> <dubbo:protocol name="dubbo" 
+		port="9090" server="netty" client="netty" codec="dubbo" serialization="hessian2" 
+		charset="UTF-8" threadpool="fixed" threads="100" queues="0" iothreads="9" 
+		buffer="8192" accepts="1000" payload="8388608" /> -->
+	<!-- Service interface Concurrent Control -->
+	<dubbo:service interface="com.jp.dubbo_Service.service.IProcessData"
+		ref="demoService" executes="10" />
+	<!-- Default Protocol -->
+	<!-- <dubbo:protocol server="netty" /> -->
+	<!-- designate implementation -->
+	<bean id="demoService" class="com.jp.dubbo_Service.service.impl.ProcessDataImpl" />
+	<context:annotation-config />
+	<cache:annotation-driven />
+	<!-- 对包中的所有类进行扫描，以完成Bean创建和自动依赖注入的功能 -->
+	<context:component-scan base-package="com.jp.dubbo_Service.service.impl" />
+	<context:component-scan base-package="com.memorynotfound" />
+	<context:property-placeholder location="classpath:redis.properties" />
+	<!-- <bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig"> 
+		<property name="maxIdle" value="${redis.maxIdle}" /> <property name="maxActive" 
+		value="${redis.maxActive}" /> <property name="maxWait" value="${redis.maxWait}" 
+		/> <property name="testOnBorrow" value="${redis.testOnBorrow}" /> </bean> -->
+	<bean id="connectionFactory"
+		class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+		p:host-name="${redis.host}" p:port="${redis.port}" p:password="${redis.pass}" />
+
+	<bean id="redisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="keySerializer">
+			<bean class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+		<property name="valueSerializer">
+			<bean class="org.springframework.data.redis.serializer.JacksonJsonRedisSerializer" > 
+				<constructor-arg type="java.lang.Class" value="java.lang.Object"/>
+			</bean>
+			<!-- <bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />-->
+		</property>
+	</bean>
+	<bean id="cacheManager" class="org.springframework.data.redis.cache.RedisCacheManager" c:template-ref="redisTemplate" />
+</beans>    
